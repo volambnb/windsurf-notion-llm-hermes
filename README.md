@@ -29,6 +29,9 @@ bash scripts/add-windsurf-account.sh <your-token>
 
 # 4. Add Notion token (from browser cookies)
 bash scripts/update-notion-token.sh <token_v2> <user_id>
+
+# 5. Apply Super Kaka persona (SOUL, memory, skill)
+bash scripts/apply-persona.sh
 ```
 
 ## Services
@@ -51,6 +54,18 @@ bash scripts/update-notion-token.sh <token_v2> <user_id>
 - GLM 4.7/5/5.1
 - Grok 3
 - MiniMax M2.5
+
+## Important Config Notes
+
+### `discover_models: false`
+WindsurfAPI exposes 130+ models via `/v1/models`. Without `discover_models: false`,
+Hermes will override your curated model list with the full catalog. Always set this
+in `config/hermes-config.yaml` under the windsurf provider.
+
+### Model Persistence After Restart
+By default, Hermes resets to `default_model` after gateway restart. To persist the
+user's model selection, patch `gateway/run.py` to save/load `_session_model_overrides`
+to `~/.hermes/model_overrides.json`. See `scripts/patch-model-persist.sh`.
 
 ## Environment Variables
 
