@@ -1,0 +1,66 @@
+model:
+  default: claude-sonnet-4.6
+  provider: windsurf
+  base_url: http://127.0.0.1:3003/v1
+
+providers:
+  windsurf:
+    name: Windsurf Pro
+    base_url: http://127.0.0.1:3003/v1
+    key_env: WINDSURF_API_KEY
+    default_model: claude-sonnet-4.6
+    transport: openai_chat
+    models:
+      # Pro - Opus 4.6
+      - claude-opus-4.6
+      - claude-opus-4.6-thinking
+      # Pro - Opus 4.7
+      - claude-opus-4-7-medium
+      - claude-opus-4-7-high
+      - claude-opus-4-7-xhigh
+      - claude-opus-4-7-medium-thinking
+      - claude-opus-4-7-high-thinking
+      - claude-opus-4-7-xhigh-thinking
+      - claude-opus-4-7-max
+      # Pro - GPT 5.3/5.4/5.5
+      - gpt-5.3-codex
+      - gpt-5.4-none
+      - gpt-5.4-low
+      - gpt-5.4-medium
+      - gpt-5.4-high
+      - gpt-5.4-xhigh
+      - gpt-5.5
+      - gpt-5.5-low
+      - gpt-5.5-medium
+      - gpt-5.5-high
+      - gpt-5.5-xhigh
+      # Free
+      - kimi-k2-6
+      - kimi-k2
+      - kimi-k2-thinking
+      - kimi-k2.5
+      - gemini-2.5-flash
+      - gemini-3.0-flash
+      - gemini-3.0-flash-high
+      - glm-4.7
+      - glm-5
+      - glm-5.1
+      - grok-3
+      - grok-3-mini-thinking
+      - minimax-m2.5
+  notion-proxy:
+    name: Notion Proxy
+    base_url: http://127.0.0.1:4200/v1
+    key_env: NOTION_PROXY_API_KEY
+    default_model: claude-sonnet4.6
+    transport: openai_chat
+  nvidia:
+    name: NVIDIA NIM
+    base_url: https://integrate.api.nvidia.com/v1
+    key_env: NVIDIA_API_KEY
+    default_model: meta/llama-3.3-70b-instruct
+    transport: openai_chat
+
+fallback_providers:
+  - notion-proxy
+  - nvidia
