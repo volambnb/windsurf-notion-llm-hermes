@@ -1,17 +1,29 @@
 model:
-  default: claude-sonnet-4.6
+  default: deepseek-v4-pro
   provider: windsurf
   base_url: http://127.0.0.1:3003/v1
+
+routing_lock:
+  enabled: true
+  provider: windsurf
+  backend: windsurf-proxy
+  model: deepseek-v4-pro
+  rotate_accounts: true
+  allow_backstop: false
+  keep_signal_heal: true
+  validate_on_start: true
 
 providers:
   windsurf:
     name: Windsurf Pro
     base_url: http://127.0.0.1:3003/v1
     key_env: WINDSURF_API_KEY
-    default_model: claude-sonnet-4.6
+    default_model: deepseek-v4-pro
     transport: openai_chat
     discover_models: false
     models:
+      # v1.7 routing lock target
+      - deepseek-v4-pro
       # Pro - Opus 4.6
       - claude-opus-4.6-thinking
       # Pro - Opus 4.7
@@ -73,5 +85,25 @@ providers:
     transport: openai_chat
 
 fallback_providers:
+  - notion-proxy
+  - nvidia
+
+tier_models:
+  tier1_default: deepseek-v4-pro
+  tier2_cheap: gemini-3.0-flash-high
+  tier4_local: notion-agent-opus
+  advisor: opus-4.7
+
+model_bootstrap:
+  enabled: true
+  run_on_start: true
+  discovery_path: /models
+  ttl_seconds: 300
+  stale_seconds: 1800
+  per_account_timeout_s: 8
+  prefer_more_accounts: true
+
+model_fallback:
+  - windsurf
   - notion-proxy
   - nvidia
