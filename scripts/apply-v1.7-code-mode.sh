@@ -35,8 +35,24 @@ copy_with_backup() {
 
 copy_with_backup "$PATCH_ROOT/root/.hermes/plugins/plan-first-router/__init__.py" \
   "$HERMES_HOME/plugins/plan-first-router/__init__.py"
-copy_with_backup "$PATCH_ROOT/opt/hermes-agent/gateway_ext/hermes_windsurf_fallback/hpf_gateway/plan_pipeline.py" \
-  "$HERMES_ROOT/gateway_ext/hermes_windsurf_fallback/hpf_gateway/plan_pipeline.py"
+if [ "$HERMES_ROOT" != "/opt/hermes-agent" ] && [ ! -e /opt/hermes-agent ]; then
+  ln -s "$HERMES_ROOT" /opt/hermes-agent
+  echo "Created compatibility symlink: /opt/hermes-agent -> $HERMES_ROOT"
+fi
+
+HPF_SRC="$PATCH_ROOT/opt/hermes-agent/gateway_ext/hermes_windsurf_fallback/hpf_gateway"
+HPF_DST="$HERMES_ROOT/gateway_ext/hermes_windsurf_fallback/hpf_gateway"
+if [ ! -d "$HPF_SRC" ]; then
+  echo "ERROR: hpf_gateway patch directory not found: $HPF_SRC" >&2
+  exit 1
+fi
+if [ -d "$HPF_DST" ]; then
+  cp -a "$HPF_DST" "$HPF_DST.bak.v1.7-code-$ts"
+fi
+mkdir -p "$(dirname "$HPF_DST")"
+rm -rf "$HPF_DST"
+cp -a "$HPF_SRC" "$HPF_DST"
+echo "Applied: $HPF_DST"
 copy_with_backup "$PATCH_ROOT/opt/hermes-agent/hermes_cli/commands.py" \
   "$HERMES_ROOT/hermes_cli/commands.py"
 copy_with_backup "$PATCH_ROOT/opt/hermes-agent/gateway/run.py" \
@@ -46,7 +62,7 @@ copy_with_backup "$PATCH_ROOT/opt/hermes-agent/tools/file_tools.py" \
 
 python3 -m py_compile \
   "$HERMES_HOME/plugins/plan-first-router/__init__.py" \
-  "$HERMES_ROOT/gateway_ext/hermes_windsurf_fallback/hpf_gateway/plan_pipeline.py" \
+  "$HERMES_ROOT"/gateway_ext/hermes_windsurf_fallback/hpf_gateway/*.py \
   "$HERMES_ROOT/hermes_cli/commands.py" \
   "$HERMES_ROOT/gateway/run.py" \
   "$HERMES_ROOT/tools/file_tools.py"
