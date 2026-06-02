@@ -40,6 +40,18 @@ class RecoveryDecision:
 def classify_error(text: str | dict[str, Any] | None) -> str:
     """Classify model/provider/tool failures from logs or event payloads."""
     if isinstance(text, dict):
+        explicit_type = str(text.get("type") or "")
+        if explicit_type in {
+            "stream_stall",
+            "tool_call_malformed",
+            "terminal_path_broken",
+            "provider_timeout",
+            "account_rate_limit",
+            "csrf_auth",
+            "context_bloat",
+            "repeat_tool_loop",
+        }:
+            return explicit_type
         raw = json.dumps(text, ensure_ascii=False)
     else:
         raw = str(text or "")
