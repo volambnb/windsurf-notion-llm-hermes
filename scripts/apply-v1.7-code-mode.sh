@@ -55,17 +55,26 @@ cp -a "$HPF_SRC" "$HPF_DST"
 echo "Applied: $HPF_DST"
 copy_with_backup "$PATCH_ROOT/opt/hermes-agent/hermes_cli/commands.py" \
   "$HERMES_ROOT/hermes_cli/commands.py"
-copy_with_backup "$PATCH_ROOT/opt/hermes-agent/gateway/run.py" \
-  "$HERMES_ROOT/gateway/run.py"
+if [ "${APPLY_GATEWAY_RUN_SNAPSHOT:-0}" = "1" ]; then
+  copy_with_backup "$PATCH_ROOT/opt/hermes-agent/gateway/run.py" \
+    "$HERMES_ROOT/gateway/run.py"
+else
+  echo "Skipped gateway/run.py snapshot by default; it is version-sensitive."
+  echo "Set APPLY_GATEWAY_RUN_SNAPSHOT=1 only on the matching CA Hermes build."
+fi
 copy_with_backup "$PATCH_ROOT/opt/hermes-agent/tools/file_tools.py" \
   "$HERMES_ROOT/tools/file_tools.py"
 
-python3 -m py_compile \
-  "$HERMES_HOME/plugins/plan-first-router/__init__.py" \
-  "$HERMES_ROOT"/gateway_ext/hermes_windsurf_fallback/hpf_gateway/*.py \
-  "$HERMES_ROOT/hermes_cli/commands.py" \
-  "$HERMES_ROOT/gateway/run.py" \
+compile_targets=(
+  "$HERMES_HOME/plugins/plan-first-router/__init__.py"
+  "$HERMES_ROOT"/gateway_ext/hermes_windsurf_fallback/hpf_gateway/*.py
+  "$HERMES_ROOT/hermes_cli/commands.py"
   "$HERMES_ROOT/tools/file_tools.py"
+)
+if [ "${APPLY_GATEWAY_RUN_SNAPSHOT:-0}" = "1" ]; then
+  compile_targets+=("$HERMES_ROOT/gateway/run.py")
+fi
+python3 -m py_compile "${compile_targets[@]}"
 
 grep -q "SMART_TECHNICAL_POLICY" "$HERMES_HOME/plugins/plan-first-router/__init__.py"
 grep -q "Project Folder:" "$HERMES_HOME/plugins/plan-first-router/__init__.py"
