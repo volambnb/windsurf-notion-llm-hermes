@@ -54,18 +54,7 @@ terminal = root / "tools/terminal_tool.py"
 chat = root / "agent/chat_completion_helpers.py"
 
 base_text = base.read_text(encoding="utf-8")
-if "_normalize_path_exports" not in base_text:
-    needle = '''def _file_mtime_key(host_path: str) -> tuple[float, int] | None:
-    """Return ``(mtime, size)`` for cache comparison, or ``None`` if unreadable."""
-    try:
-        st = Path(host_path).stat()
-        return (st.st_mtime, st.st_size)
-    except OSError:
-        return None
-
-
-'''
-    replacement = needle + '''def _normalize_path_exports(command: str) -> str:
+path_helper = '''def _normalize_path_exports(command: str) -> str:
     """Route PATH export normalization through self-heal router when available."""
     try:
         from hpf_gateway.self_heal_router import normalize_path_exports
@@ -81,10 +70,26 @@ if "_normalize_path_exports" not in base_text:
                 line = f"{line}:${{PATH:-{sane}}}:{sane}"
             out.append(line)
         return "\\n".join(out)
+'''
+if "_normalize_path_exports" not in base_text:
+    needle = '''def _file_mtime_key(host_path: str) -> tuple[float, int] | None:
+    """Return ``(mtime, size)`` for cache comparison, or ``None`` if unreadable."""
+    try:
+        st = Path(host_path).stat()
+        return (st.st_mtime, st.st_size)
+    except OSError:
+        return None
 
 
 '''
+    replacement = needle + path_helper + "\n"
     patch_once(base, needle, replacement)
+else:
+    start = base_text.find("def _normalize_path_exports(command: str) -> str:")
+    end = base_text.find("\n\n# ---------------------------------------------------------------------------", start)
+    if start != -1 and end != -1 and "hpf_gateway.self_heal_router" not in base_text[start:end]:
+        backup(base)
+        base.write_text(base_text[:start] + path_helper + base_text[end:], encoding="utf-8")
 
 patch_once(
     base,
@@ -121,6 +126,146 @@ patch_once(
             return json.dumps({
 ''',
 )
+
+todo = root / "tools/todo_tool.py"
+todo_text = todo.read_text(encoding="utf-8")
+if "def _coerce_item(item: Any, index: int) -> Dict[str, Any]:" not in todo_text:
+    backup(todo)
+    todo_text = todo_text.replace(
+        '''    @staticmethod
+    def _validate(item: Dict[str, Any]) -> Dict[str, str]:
+''',
+        '''    @staticmethod
+    def _coerce_item(item: Any, index: int) -> Dict[str, Any]:
+        """Accept imperfect model output instead of crashing the agent loop."""
+        if isinstance(item, dict):
+            return item
+        content = str(item).strip() if item is not None else ""
+        return {"id": f"T{index + 1}", "content": content or "(no description)", "status": "pending"}
+
+    @staticmethod
+    def _validate(item: Dict[str, Any]) -> Dict[str, str]:
+''',
+    )
+    todo_text = todo_text.replace(
+        '''        if not merge:
+            # Replace mode: new list entirely
+            self._items = [self._validate(t) for t in self._dedupe_by_id(todos)]
+        else:
+            # Merge mode: update existing items by id, append new ones
+            existing = {item["id"]: item for item in self._items}
+            for t in self._dedupe_by_id(todos):
+''',
+        '''        normalized = [self._coerce_item(t, i) for i, t in enumerate(todos or [])]
+        if not merge:
+            # Replace mode: new list entirely
+            self._items = [self._validate(t) for t in self._dedupe_by_id(normalized)]
+        else:
+            # Merge mode: update existing items by id, append new ones
+            existing = {item["id"]: item for item in self._items}
+            for t in self._dedupe_by_id(normalized):
+''',
+    )
+    todo_text = todo_text.replace(
+        '''        for i, item in enumerate(todos):
+            item_id = str(item.get("id", "")).strip() or "?"
+            last_index[item_id] = i
+        return [todos[i] for i in sorted(last_index.values())]
+''',
+        '''        for i, item in enumerate(todos or []):
+            if not isinstance(item, dict):
+                item = TodoStore._coerce_item(item, i)
+                todos[i] = item
+            item_id = str(item.get("id", "")).strip() or "?"
+            last_index[item_id] = i
+        return [todos[i] for i in sorted(last_index.values())]
+''',
+    )
+    todo.write_text(todo_text, encoding="utf-8")
+
+windsurf_tool_emulation = Path("/opt/WindsurfAPI/src/handlers/tool-emulation.js")
+if windsurf_tool_emulation.exists():
+    js = windsurf_tool_emulation.read_text(encoding="utf-8")
+    changed = False
+    if "function parseParameterStyleToolCallBody(body)" not in js:
+        marker = "function parseGlm47ToolCallBody(body) {\n"
+        helper = r'''function parseParameterStyleToolCallBody(body) {
+  if (typeof body !== 'string' || !body.includes('<parameter')) return null;
+  const params = {};
+  let name = null;
+  const attrName = body.match(/<tool_call\b[^>]*\bname\s*=\s*["']([^"']+)["'][^>]*>/i);
+  if (attrName) name = attrName[1];
+  const re = /<parameter\b([^>]*)>([\s\S]*?)<\/parameter>/gi;
+  let m;
+  while ((m = re.exec(body)) !== null) {
+    const attrs = m[1] || '';
+    const keyMatch = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
+    if (!keyMatch) continue;
+    const key = keyMatch[1];
+    let value = (m[2] || '').trim();
+    if (/\bstring\s*=\s*["']false["']/i.test(attrs)) {
+      const lowered = value.toLowerCase();
+      if (lowered === 'true') value = true;
+      else if (lowered === 'false') value = false;
+      else if (/^-?\d+(?:\.\d+)?$/.test(value)) value = Number(value);
+    }
+    params[key] = value;
+  }
+  if (!Object.keys(params).length) return null;
+  if (!name) {
+    if ('command' in params) name = 'terminal';
+    else if ('path' in params || 'file_path' in params) name = 'read_file';
+    else name = 'terminal';
+  }
+  return { name, argumentsJson: JSON.stringify(params) };
+}
+
+'''
+        if marker not in js:
+            raise SystemExit("Windsurf tool-emulation parseGlm47 anchor missing")
+        js = js.replace(marker, helper + marker, 1)
+        changed = True
+    if "parameter_xml" not in js:
+        marker = "  // 1. Markdown-fenced JSON. Tolerate ```json, ```tool_call, or bare ```.\n"
+        parameter_salvage = r'''  working = working.replace(/<tool_call\b[^>]*>[\s\S]*?<\/tool_call>/gi, (match) => {
+    const tc = parseParameterStyleToolCallBody(match);
+    if (!tc) return match;
+    calls.push({ id: newId(), ...tc });
+    formats.add('parameter_xml');
+    return '';
+  });
+  working = working.replace(/<\/?tool_calls?>/gi, '');
+
+'''
+        if marker not in js:
+            raise SystemExit("Windsurf tool-emulation salvage anchor missing")
+        js = js.replace(marker, parameter_salvage + marker, 1)
+        changed = True
+    old_flush = '''    if (this.inToolCall) {
+      this.inToolCall = false;
+      return { text: `<tool_call>${remaining}`, toolCalls: [] };
+    }
+'''
+    new_flush = '''    if (this.inToolCall) {
+      this.inToolCall = false;
+      const parameterCall = parseParameterStyleToolCallBody(`<tool_call>${remaining}`);
+      if (parameterCall) {
+        parameterCall.id = `call_param_${this._totalSeen}_${Date.now().toString(36)}`;
+        this._totalSeen++;
+        return { text: '', toolCalls: [parameterCall] };
+      }
+      return { text: `<tool_call>${remaining}`, toolCalls: [] };
+    }
+'''
+    if old_flush in js and new_flush not in js:
+        js = js.replace(old_flush, new_flush, 1)
+        changed = True
+    if "\x08" in js:
+        js = js.replace("\x08", r"\b")
+        changed = True
+    if changed:
+        backup(windsurf_tool_emulation)
+        windsurf_tool_emulation.write_text(js, encoding="utf-8")
 
 patch_once(
     chat,
@@ -167,7 +312,13 @@ python3 -m py_compile \
   "$HPF_DST/self_heal_router.py" \
   "$HERMES_ROOT/tools/environments/base.py" \
   "$HERMES_ROOT/tools/terminal_tool.py" \
+  "$HERMES_ROOT/tools/todo_tool.py" \
   "$HERMES_ROOT/agent/chat_completion_helpers.py"
+
+if [ -f /opt/WindsurfAPI/src/handlers/tool-emulation.js ] && command -v node >/dev/null 2>&1; then
+  node --check /opt/WindsurfAPI/src/handlers/tool-emulation.js
+  systemctl restart windsurf-api.service || true
+fi
 
 if command -v systemctl >/dev/null 2>&1; then
   systemctl restart hermes-gateway.service || true
