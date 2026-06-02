@@ -52,6 +52,9 @@ bash scripts/apply-v1.7-routing-lock.sh
 
 # 7. Apply /code plan-first project isolation and smart planning policy
 bash scripts/apply-v1.7-code-mode.sh
+
+# 8. Apply same-model self-heal router for Windsurf /code failures
+bash scripts/apply-v1.7-self-heal-router.sh
 ```
 
 ## Services
@@ -96,6 +99,30 @@ Run this on the VPS to apply the live-tested patch set:
 
 ```bash
 bash scripts/apply-v1.7-code-mode.sh
+```
+
+### Same-Model Self-Heal Router
+
+`scripts/apply-v1.7-self-heal-router.sh` installs a small recovery layer for `/code` runs pinned to Windsurf `deepseek-v4-pro`. It does not switch provider or model automatically.
+
+It classifies common failure patterns such as stream stalls, malformed tool calls, broken terminal PATH exports, provider timeout, account rate limit, stale CSRF/auth, repeated tool loops, and context bloat. Events are written to:
+
+```bash
+~/.hermes/self_heal/events.jsonl
+```
+
+For `/code` projects, the router writes recovery state to:
+
+```bash
+<Project Folder>/.hermes-code-state.json
+```
+
+The terminal hardening keeps core tools available when a model emits `export PATH=/usr/local/go/bin` without `/usr/bin`, and records malformed `terminal` tool calls instead of letting them silently loop.
+
+Apply on a VPS:
+
+```bash
+bash scripts/apply-v1.7-self-heal-router.sh
 ```
 
 ### Hermes 1.7 Pinned Model Mode
