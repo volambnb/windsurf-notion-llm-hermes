@@ -23,13 +23,20 @@ ACTIVE_PLAN_FILE = Path(os.environ.get("HERMES_ACTIVE_CODE_PLAN_FILE", "/root/.h
 SANE_PATH = "/opt/hermes-agent/.venv/bin:/root/.hermes/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 SMART_TECHNICAL_POLICY = """/code technical planning policy (always apply):
-1. If the request contains GitHub repository URLs, treat those repositories as the source of truth for language, framework, package manager, folder layout, conventions, and compatibility. The plan must inspect/clone/read the repo before implementation.
-2. Prefer the repository's existing ecosystem for maintainability. If the repo is Node/TypeScript, Python, Go, Rust, etc., keep that ecosystem unless there is a strong reason to diverge.
-3. Only propose Go or Rust when the repo already uses them, the user explicitly asks for them, or there is a concrete reason such as performance, single-binary deployment, concurrency, memory safety, CLI/agent infrastructure, or low-resource VPS deployment.
-4. If no repo is provided, choose the most pragmatic stable stack for the requested product using modern stable 2026 best practices. Avoid beta/experimental dependencies unless they clearly reduce risk.
-5. The plan must be technically explicit: architecture, modules/files, named functions or scripts, inputs/outputs, edge cases, build/test commands, and VPS deploy-readiness notes.
-6. Keep the existing required markdown headings exactly: #, ## Goal, ## Context, ## Tasks, ## Tool Plan, ## Acceptance Criteria, ## Risks.
-7. In Context, include repo/stack inference and language-choice rationale. In Tasks, use executable checklist IDs like **T1**. In Tool Plan, include exact commands/scripts and repo inspection order.
+1. Treat the implementer as a generic coding agent, not a Hermes-specific coding agent.
+2. If the request contains GitHub repository URLs, treat those repositories as the source of truth for language, framework, package manager, folder layout, conventions, APIs, scripts, tests, deployment style, and compatibility. The plan must inspect/clone/read the repo before implementation.
+3. Prefer the repository's existing ecosystem for maintainability. If the repo is Node/TypeScript, Python, Go, Rust, etc., keep that ecosystem unless there is a strong reason to diverge.
+4. Only propose Go or Rust when the repo already uses them, the user explicitly asks for them, or there is a concrete reason such as performance, single-binary deployment, concurrency, memory safety, CLI/agent infrastructure, or low-resource VPS deployment.
+5. If the request does not contain a GitHub URL and is only an idea or product description, first normalize it into a precise technical product brief: target users, core workflow, required screens/APIs/modules, data model, runtime constraints, deployment target, and non-goals.
+6. For idea-only requests, search GitHub for mature, relevant repositories whose technical purpose, architecture, or product behavior is similar or adjacent. Use these repositories as reference material, not mandatory dependencies. Prefer actively maintained repos with clear README, package files, scripts, tests, and deploy docs.
+7. For each selected reference repo, analyze stack, folder layout, core modules, important functions/classes, scripts, tests, build/deploy flow, strengths, weaknesses, and which ideas should or should not be reused.
+8. Choose the most pragmatic stable stack after comparing the normalized product brief with the GitHub references. Use modern stable 2026 best practices and avoid beta/experimental dependencies unless they clearly reduce risk.
+9. Keep the existing required markdown headings exactly: #, ## Goal, ## Context, ## Tasks, ## Tool Plan, ## Acceptance Criteria, ## Risks.
+10. In Context, include normalized technical brief, repo/stack inference, GitHub reference repos inspected or to inspect, language-choice rationale, and why the final stack is appropriate.
+11. In Tasks, use executable checklist IDs like **T1** and mention concrete files/modules/functions/scripts to create, inspect, or modify.
+12. In Tool Plan, include exact commands/scripts, GitHub search terms, repo inspection order, clone/read commands, package-manager commands, build/test commands, and deploy-readiness checks.
+13. In Acceptance Criteria, include local run success, test success, implementation completeness, UX/API behavior, and deploy-ready criteria.
+14. In Risks, include dependency/version risk, GitHub reference mismatch risk, tool-calling/provider risk, repo compatibility risk, security/secrets risk, and VPS deployment risk.
 """
 
 
