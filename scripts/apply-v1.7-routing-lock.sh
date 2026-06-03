@@ -109,7 +109,7 @@ tier_models:
   tier1_default: {pinned_model}
   tier2_cheap: gemini-3.0-flash-high
   tier4_local: notion-agent-opus
-  advisor: opus-4.7
+  advisor: opus-4.8
 """
     if "model_bootstrap:" not in s:
         s += """

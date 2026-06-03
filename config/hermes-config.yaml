@@ -75,8 +75,19 @@ providers:
     name: Notion Proxy
     base_url: http://127.0.0.1:4200/v1
     key_env: NOTION_PROXY_API_KEY
-    default_model: claude-sonnet4.6
+    default_model: claude-opus4.8
     transport: openai_chat
+    models:
+      - claude-opus4.6
+      - claude-opus4.7
+      - claude-opus4.8
+      - claude-sonnet4.6
+      - gemini-2.5flash
+      - gemini-3.1pro
+      - gpt-5.2
+      - gpt-5.4
+      - gpt-5.5
+      - kimi-2.6
   nvidia:
     name: NVIDIA NIM
     base_url: https://integrate.api.nvidia.com/v1
@@ -92,7 +103,7 @@ tier_models:
   tier1_default: deepseek-v4-pro
   tier2_cheap: gemini-3.0-flash-high
   tier4_local: notion-agent-opus
-  advisor: opus-4.7
+  advisor: opus-4.8
 
 model_bootstrap:
   enabled: true
